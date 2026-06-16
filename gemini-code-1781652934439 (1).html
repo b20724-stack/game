@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏝️ 동숲 감성! 커여운 불꽃반응 무인도 탐험 🏝️</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #0d9488;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            user-select: none;
+        }
+
+        /* [요구사항 반영] 좌측 상단 실시간 동그라미 미니맵 레이어 */
+        #minimap-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 160px;
+            height: 160px;
+            background: rgba(240, 230, 210, 0.9); /* 동숲 느낌 따뜻한 아이보리 */
+            border: 5px solid #854d0e; /* 나무색 테두리 */
+            border-radius: 50%;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            z-index: 10;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #minimap-canvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        #minimap-player {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ef4444;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 5px #000;
+        }
+        /* 미니맵 안의 원소 포인트들 */
+        .minimap-dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* 하찮고 커여운 대화창 UI */
+        #dialogue-box {
+            display: none;
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            background: #fffdf5;
+            border: 5px solid #f59e0b;
+            border-radius: 24px;
+            padding: 18px 24px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+            z-index: 20;
+        }
+        #dialogue-text {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            font-weight: bold;
+            color: #451a03;
+            white-space: pre-line;
+            line-height: 1.5;
+        }
+        #dialogue-btn {
+            float: right;
+            background: #d97706;
+            color: #fff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* 최종 도감 결과창 */
+        #report-screen {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #f0fdf4;
+            justify-content: center;
+            align-items: center;
+            z-index: 40;
+        }
+        .report-box {
+            width: 90%;
+            max-width: 500px;
+            background: #fff;
+            padding: 25px;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            border: 4px solid #10b981;
+        }
+        .report-title {
+            text-align: center;
+            color: #065f46;
+            margin: 0 0 4px 0;
+            font-size: 22px;
+        }
+        .report-subtitle {
+            text-align: center;
+            color: #6b7280;
+            font-size: 13px;
+            margin: 0 0 20px 0;
+        }
+        .card-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .element-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 18px;
+            border-radius: 14px;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="minimap-container">
+        <div id="minimap-canvas">
+            <div id="minimap-player"></div>
+        </div>
+    </div>
+
+    <div id="dialogue-box">
+        <p id="dialogue-text"></p>
+        <button id="dialogue-btn" onclick="closeDialogue()">체험 완료! 🎒</button>
+    </div>
+
+    <div id="report-screen">
+        <div class="report-box">
+            <h1 class="report-title">🏝️ 무인도 불꽃반응 마스터 도감 🔬</h1>
+            <p class="report-subtitle">지루한 화학 암기는 끝! 무인도에서 수집한 원소 정보야</p>
+            
+            <div class="card-container">
+                <div class="element-card" style="background: #fee2e2; border: 2px solid #dc2626; color: #dc2626;"><span>리튬 (Li) - 화산 코어</span><span>빨간색 🔴</span></div>
+                <div class="element-card" style="background: #ffedd5; border: 2px solid #ea580c; color: #ea580c;"><span>스트론튬 (Sr) - 화산 암석 지대</span><span>진한 빨간색(황록) 🚨</span></div>
+                <div class="element-card" style="background: #fef9c3; border: 2px solid #ca8a04; color: #ca8a04;"><span>나트륨 (Na) - 해변 모래사장</span><span>노란색 🟡</span></div>
+                <div class="element-card" style="background: #f0fdf4; border: 2px solid #16a34a; color: #16a34a;"><span>바륨 (Ba) - 해안 절벽 바다</span><span>황록색 🍏</span></div>
+                <div class="element-card" style="background: #ccfbf1; border: 2px solid #0d9488; color: #0d9488;"><span>구리 (Cu) - 광산 동굴</span><span>청록색 🟢</span></div>
+                <div class="element-card" style="background: #f3e8ff; border: 2px solid #7c3aed; color: #7c3aed;"><span>칼륨 (K) - 신비한 수정림</span><span>보라색 🟣</span></div>
+                <div class="element-card" style="background: #ffedd5; border: 2px solid #ea580c; color: #ea580c;"><span>칼슘 (Ca) - 야자수 정글</span><span>주황색 🟠</span></div>
+            </div>
+
+            <div class="btn-group">
+                <button class="action-btn" style="background: #10b981;" onclick="window.location.reload()">다시 탐험하기 🔄</button>
+                <button class="action-btn" style="background: #6b7280;" onclick="alert('오늘의 탐험 완벽 종료!')">도감 닫기 🚪</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let discoveredElements = new Set();
+        let currentCallback = null;
+        let isDialogueOpen = false;
+        
+        // 지도 및 원소 배치 메타 데이터 (7개 원소 확장 및 테마 장소 고정)
+        const MAP_WIDTH = 2000;
+        const MAP_HEIGHT = 2000;
+        const DEFAULT_FLAME_COLOR = 0xff6b00; // 원본 주황색 불꽃 색상
+
+        const ZONES_DATA = [
+            { id: 'Sodium', name: '나트륨 (Na)', color: 0xFFFF00, x: 400, y: 300, radius: 150, msg: "🐢 거북이:\n안녕! 여긴 짭조름한 해변가야. 모래에 섞인 '나트륨(Na)'을 만나면 불꽃이 번쩍이는 노란색🟡이 돼!" },
+            { id: 'BaRium', name: '바륨 (Ba)', color: 0xADFF2F, x: 500, y: 1600, radius: 160, msg: "🐋 아기 고래:\n푸우우=3 파도가 치는 깊은 바다 지대야! 바다석에 숨겨진 '바륨(Ba)'은 싱그러운 황록색🍏을 뿜어내지!" },
+            { id: 'Lithium', name: '리튬 (Li)', color: 0xFF0000, x: 1600, y: 400, radius: 150, msg: "🦅 불새 수호신:\n쿠구구궁! 뜨거운 화산 코어 지대다! 이글거리는 '리튬(Li)' 에너지를 흡수하면 강렬한 빨간색🔴 불꽃 폼 체인지!" },
+            { id: 'Strontium', name: '스트론튬 (Sr)', color: 0xE11D48, x: 1700, y: 750, radius: 150, msg: "🦎 용암 도마뱀:\n화산 밑 암석 지대야! 리튬이랑 비슷해 보이지만, '스트론튬(Sr)'은 훨씬 진하고 붉은 주홍빛 빨간색🚨 폼이란다!" },
+            { id: 'Copper', name: '구리 (Cu)', color: 0x00FFCC, x: 1000, y: 600, radius: 140, msg: "🦇 박쥐:\n키에엑! 깊숙한 비밀 광산 동굴이야. 여기 가득한 '구리(Cu)' 성분이 닿으면 신비로운 청록색🟢 불꽃으로 바뀐단다!" },
+            { id: 'Potassium', name: '칼륨 (K)', color: 0x9b59b6, x: 1000, y: 1400, radius: 140, msg: "🧚 수정 요정:\n반짝이는 보랏빛 수정림에 온 걸 환영해! '칼륨(K)'의 요정 기운을 받아서 신비로운 보라색🟣 불꽃 스킨을 켜봐!" },
+            { id: 'Calcium', name: '칼슘 (Ca)', color: 0xEA580C, x: 1100, y: 1000, radius: 150, msg: "🐒 원숭이:\n우끼끼! 야자수가 흔들리는 정글 수풀이야! 뼈가 단단해지는 '칼슘(Ca)' 구역에 서 있으면 따뜻한 주황색🟠 불꽃이 일렁여!" }
+        ];
+
+        class IslandAdventureScene extends Phaser.Scene {
+            constructor() { super('IslandAdventureScene'); }
+
+            preload() {}
+
+            create() {
+                // 1. 무인도 지형 비주얼 연출 (바다 & 섬 & 언덕 경계선 코드로 드로잉)
+                // 바다 배경
+                this.add.rectangle(MAP_WIDTH/2, MAP_HEIGHT/2, MAP_WIDTH, MAP_HEIGHT, 0x22d3ee);
+                
+                // 메인 잔디 섬 (동글동글 동숲 레이아웃 모양)
+                let islandGeo = this.add.graphics();
+                islandGeo.fillStyle(0x4ade80, 1);
+                islandGeo.fillEllipse(MAP_WIDTH/2, MAP_HEIGHT/2, MAP_WIDTH - 300, MAP_HEIGHT - 300);
+                
+                // 중앙 고지대 언덕 구역 표현
+                islandGeo.fillStyle(0x22c55e, 1);
+                islandGeo.fillCircle(MAP_WIDTH/2, MAP_HEIGHT/2, 450);
+
+                // 2. 파도 치는 시각 효과 (바다 경계면에 흰색 파티클 배치)
+                this.waveParticles = [];
+                for (let i = 0; i < 60; i++) {
+                    let angle = Math.random() * Math.PI * 2;
+                    let radX = (MAP_WIDTH - 320)/2 + Math.random()*30;
+                    let radY = (MAP_HEIGHT - 320)/2 + Math.random()*30;
+                    let p = this.add.circle(MAP_WIDTH/2 + Math.cos(angle)*radX, MAP_HEIGHT/2 + Math.sin(angle)*radY, Math.random()*6 + 2, 0xffffff, 0.6);
+                    this.waveParticles.push(p);
+                }
+
+                // 3. 바람에 흔들리는 가상 나무 오브젝트 무작위 생성
+                this.trees = [];
+                for (let i = 0; i < 45; i++) {
+                    let tx = 400 + Math.random() * (MAP_WIDTH - 800);
+                    let ty = 400 + Math.random() * (MAP_HEIGHT - 800);
+                    // 화산이나 중앙 동굴 제외 구역에 나무 배치
+                    if (Phaser.Math.Distance.Between(tx, ty, 1600, 500) > 300 && Phaser.Math.Distance.Between(tx, ty, 1000, 600) > 200) {
+                        let trunk = this.add.rectangle(tx, ty, 12, 35, 0x78350f);
+                        let leaves = this.add.circle(tx, ty - 25, 25, 0x15803d);
+                        this.trees.push({ leaves, baseKey: ty, phase: Math.random() * 100 });
+                    }
+                }
+
+                // 4. 요구사항 반영: 테마별 원소 스팟 비주얼 장소 구현
+                ZONES_DATA.forEach(zone => {
+                    // 특수 구역 오라 이펙트
+                    let aura = this.add.circle(zone.x, zone.y, zone.radius, zone.color, 0.15);
+                    this.add.circle(zone.x, zone.y, 15, 0xffffff, 0.8);
+                    
+                    // 장소 텍스트 안내 피오네르
+                    this.add.text(zone.x - 50, zone.y - 35, zone.id, { font: 'bold 16px Arial', fill: '#1e293b', backgroundColor: '#ffffffaa', padding: 4 });
+
+                    // 화산 구역 데코레이션 (리튬, 스트론튬 구역 전용 데코)
+                    if (zone.id === 'Lithium' || zone.id === 'Strontium') {
+                        this.add.triangle(zone.x, zone.y + 40, zone.x - 30, zone.y + 80, zone.x + 30, zone.y + 80, zone.x, zone.y + 40, 0xef4444);
+                    }
+                });
+
+                // 5. 요구사항 반영: 정교하게 드로잉된 '불꽃 모양 캐릭터' 생성
+                this.playerFlame = this.add.graphics();
+                this.drawFlame(this.playerFlame, DEFAULT_FLAME_COLOR);
+
+                // 물리 바디 컨테이너 세팅
+                this.playerContainer = this.add.container(MAP_WIDTH/2, MAP_HEIGHT/2, [this.playerFlame]);
+                this.physics.add.existing(this.container || this.playerContainer);
+                this.playerContainer.body.setCollideWorldBounds(true);
+                this.playerContainer.body.setSize(40, 40);
+                this.playerContainer.body.setOffset(-20, -20);
+
+                // 6. 요구사항 반영: 시야 대폭 확대 (줌인 값 0.65 -> 1.5로 전격 스케일 업)
+                this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
+                this.cameras.main.startFollow(this.playerContainer, true, 0.1, 0.1);
+                this.cameras.main.setZoom(1.5);
+
+                // 컨트롤 조작 매핑
+                this.cursors = this.input.keyboard.createCursorKeys();
+                this.wasd = this.input.keyboard.addKeys('W,A,S,D');
+
+                // 웹 미니맵 리스트 미리 등록
+                initMinimapDots();
+            }
+
+            // 불꽃 패스 그리기 함수 (일렁이는 불꽃 형상 셰이프)
+            drawFlame(graphics, color) {
+                graphics.clear();
+                graphics.fillStyle(color, 1);
+                graphics.beginPath();
+                graphics.moveTo(0, -25); // 불꽃 꼭대기 뾰족한 부분
+                graphics.quadraticCurveTo(18, -5, 15, 10);
+                graphics.quadraticCurveTo(12, 22, 0, 22); // 바닥 둥근 곡선
+                graphics.quadraticCurveTo(-12, 22, -15, 10);
+                graphics.quadraticCurveTo(-18, -5, 0, -25);
+                graphics.closePath();
+                graphics.fill();
